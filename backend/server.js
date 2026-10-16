@@ -5,14 +5,17 @@ const cors = require('cors');
 
 // Import route modules
 const productRoutes = require('./routes/productRoutes');
-const partnerRoutes = require('./routes/partnerRoutes');
-const inquiryRoutes = require('./routes/inquiryRoutes');
+ const partnerRoutes = require('./routes/partnerRoutes');
+ const inquiryRoutes = require('./routes/inquiryRoutes');
+ const saleRoutes = require('./routes/saleRoutes');
 
 // Sample seed data fallback helper
-const { sampleProducts, samplePartners, sampleInquiries } = require('./seedData');
+const { sampleProducts, samplePartners, sampleInquiries, sampleSales } = require('./seedData');
 const Product = require('./models/Product');
 const Partner = require('./models/Partner');
 const Inquiry = require('./models/Inquiry');
+const Sale = require('./models/Sale');
+
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -37,6 +40,7 @@ app.use((req, res, next) => {
 app.use('/api/products', productRoutes);
 app.use('/api/partners', partnerRoutes);
 app.use('/api/inquiries', inquiryRoutes);
+app.use('/api/sales', saleRoutes);
 
 // System health check
 app.get('/api/health', (req, res) => {
@@ -48,8 +52,13 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// Simple root welcome
-app.get('/', (req, res) => {
+// Serve frontend dist files in production if available
+const path = require('path');
+const distPath = path.join(__dirname, '../frontend/dist');
+app.use(express.static(distPath));
+
+// Root welcome / fallback
+app.get('/api', (req, res) => {
   res.send('<h3>✨ RatanFlow API Server is running. Visit <a href="/api/health">/api/health</a> or <a href="/api/products">/api/products</a></h3>');
 });
 
@@ -84,12 +93,14 @@ async function startServer() {
         await Product.insertMany(sampleProducts);
         await Partner.insertMany(samplePartners);
         await Inquiry.insertMany(sampleInquiries);
-        console.log('✓ In-Memory Database auto-seeded with realistic jewelry inventory & partners!');
+        await Sale.insertMany(sampleSales);
+        console.log('✓ In-Memory Database auto-seeded with realistic jewelry inventory, sales & partners!');
       }
     } catch (memErr) {
       console.error('Fatal: Could not initialize database fallback:', memErr.message);
     }
   }
+
 
   // Start HTTP listener
   app.listen(PORT, () => {

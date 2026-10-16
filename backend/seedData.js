@@ -3,6 +3,8 @@ const mongoose = require('mongoose');
 const Product = require('./models/Product');
 const Partner = require('./models/Partner');
 const Inquiry = require('./models/Inquiry');
+const Sale = require('./models/Sale');
+
 
 const sampleProducts = [
   {
@@ -181,6 +183,64 @@ const sampleInquiries = [
   }
 ];
 
+const sampleSales = [
+  {
+    invoiceNumber: 'RF-INV-2026-001',
+    customerName: 'Mrs. S. Singhania',
+    itemName: 'Royal Heritage Kundan Polki Choker',
+    category: 'Bridal Sets',
+    metalType: 'Gold 22K',
+    amount: 185000,
+    paymentMode: 'NEFT / RTGS',
+    billedBy: 'Ratan Verma',
+    saleDate: new Date(Date.now() - 3600000 * 2)
+  },
+  {
+    invoiceNumber: 'RF-INV-2026-002',
+    customerName: 'Rajesh Agarwal',
+    itemName: 'Eternal Solitaire Diamond Ring',
+    category: 'Rings',
+    metalType: 'Platinum 950',
+    amount: 98000,
+    paymentMode: 'HDFC Card',
+    billedBy: 'Aarav Patel',
+    saleDate: new Date(Date.now() - 3600000 * 4)
+  },
+  {
+    invoiceNumber: 'RF-INV-2026-003',
+    customerName: 'Kavita Joshi',
+    itemName: 'Traditional Temple Lakshmi Bangle',
+    category: 'Bangles',
+    metalType: 'Gold 22K',
+    amount: 72500,
+    paymentMode: 'UPI',
+    billedBy: 'Kavita Soni',
+    saleDate: new Date(Date.now() - 3600000 * 5)
+  },
+  {
+    invoiceNumber: 'RF-INV-2026-004',
+    customerName: 'Vikram Rajput',
+    itemName: 'Antique Oxidized Silver Payal',
+    category: 'Chains',
+    metalType: 'Silver 925',
+    amount: 36850,
+    paymentMode: 'Cash',
+    billedBy: 'Ratan Verma',
+    saleDate: new Date(Date.now() - 3600000 * 7)
+  },
+  {
+    invoiceNumber: 'RF-INV-2026-005',
+    customerName: 'Pooja Sharma',
+    itemName: 'Classic 22K Floral Jhumka Earrings',
+    category: 'Earrings',
+    metalType: 'Gold 22K',
+    amount: 36000,
+    paymentMode: 'UPI',
+    billedBy: 'Devika Shah',
+    saleDate: new Date(Date.now() - 3600000 * 8)
+  }
+];
+
 async function seedDatabase() {
   const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/ratanflow';
   try {
@@ -192,16 +252,19 @@ async function seedDatabase() {
     await Product.deleteMany({});
     await Partner.deleteMany({});
     await Inquiry.deleteMany({});
+    await Sale.deleteMany({});
     console.log('✓ Cleared old collections');
 
     // Insert sample records
     const insertedProducts = await Product.insertMany(sampleProducts);
     const insertedPartners = await Partner.insertMany(samplePartners);
     const insertedInquiries = await Inquiry.insertMany(sampleInquiries);
+    const insertedSales = await Sale.insertMany(sampleSales);
 
     console.log(`✓ Inserted ${insertedProducts.length} jewelry products`);
     console.log(`✓ Inserted ${insertedPartners.length} co-owner partners`);
     console.log(`✓ Inserted ${insertedInquiries.length} VIP customer inquiries`);
+    console.log(`✓ Inserted ${insertedSales.length} sample sales transactions`);
 
     console.log('\n--- RATANFLOW SEED COMPLETED SUCCESSFULLY ---');
     process.exit(0);
@@ -216,4 +279,5 @@ if (require.main === module) {
   seedDatabase();
 }
 
-module.exports = { sampleProducts, samplePartners, sampleInquiries };
+module.exports = { sampleProducts, samplePartners, sampleInquiries, sampleSales };
+
