@@ -1,0 +1,14 @@
+{
+  "name": "ratanflow-jewelry-management",
+  "version": "1.0.0",
+  "description": "RatanFlow - Fine Jewelry Store Management System (Final Year MERN Stack Project)",
+  "scripts": {
+    "dev:backend": "cd backend && npm start",
+    "dev:frontend": "cd frontend && npm run dev",
+    "seed": "cd backend && npm run seed",
+    "build:frontend": "cd frontend && npm run build"
+  },
+  "keywords": ["mern", "jewelry-erp", "final-year-project"],
+  "author": "Student Developers",
+  "license": "ISC"
+}

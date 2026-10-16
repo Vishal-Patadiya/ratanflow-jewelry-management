@@ -1,0 +1,23 @@
+{
+  "name": "ratanflow-backend",
+  "version": "1.0.0",
+  "description": "RatanFlow - Jewelry Store Management System Backend (Final Year Project)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "seed": "node seedData.js"
+  },
+  "keywords": ["mern", "jewelry-management", "student-project"],
+  "author": "Student Developers",
+  "license": "ISC",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "mongoose": "^8.4.1"
+  },
+  "devDependencies": {
+    "mongodb-memory-server": "^9.2.0"
+  }
+}
