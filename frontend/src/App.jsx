@@ -9,10 +9,16 @@ import EditProductModal from './components/Modals/EditProductModal';
 import AddProductModal from './components/Modals/AddProductModal';
 import { Loader2 } from 'lucide-react';
 
+// Configure Axios Base URL for local development vs Vercel production
+if (import.meta.env.VITE_API_BASE_URL) {
+  axios.defaults.baseURL = import.meta.env.VITE_API_BASE_URL;
+}
+
 // Viva Note: Central State Hub & Role Gateway.
 // Defaults to Public User View for all visitors.
 // Enforces hardcoded credential check for Admin suite access with session persistence.
 export default function App() {
+
   // Access control state: 'public' (default) | 'login' | 'admin'
   const [currentView, setCurrentView] = useState('public');
   const [adminUser, setAdminUser] = useState(null);
