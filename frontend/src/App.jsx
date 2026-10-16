@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import Navbar from './components/Navbar';
 import Sidebar from './components/Sidebar';
 import PublicHome from './pages/PublicHome';
@@ -7,18 +6,13 @@ import AdminLogin from './pages/AdminLogin';
 import AdminDashboard from './pages/AdminDashboard';
 import EditProductModal from './components/Modals/EditProductModal';
 import AddProductModal from './components/Modals/AddProductModal';
+import { dataService, enrichProduct } from './services/dataService';
 import { Loader2 } from 'lucide-react';
-
-// Configure Axios Base URL for local development vs Vercel production
-if (import.meta.env.VITE_API_BASE_URL) {
-  axios.defaults.baseURL = import.meta.env.VITE_API_BASE_URL;
-}
 
 // Viva Note: Central State Hub & Role Gateway.
 // Defaults to Public User View for all visitors.
 // Enforces hardcoded credential check for Admin suite access with session persistence.
 export default function App() {
-
   // Access control state: 'public' (default) | 'login' | 'admin'
   const [currentView, setCurrentView] = useState('public');
   const [adminUser, setAdminUser] = useState(null);
@@ -30,10 +24,10 @@ export default function App() {
   // Core Data States
   const [products, setProducts] = useState([]);
   const [metrics, setMetrics] = useState({
-    totalProducts: 0,
-    totalInventoryValue: 0,
-    lowStockCount: 0,
-    highDemandCount: 0
+    totalProducts: 8,
+    totalInventoryValue: 4572500,
+    lowStockCount: 3,
+    highDemandCount: 3
   });
 
   const [salesMetrics, setSalesMetrics] = useState({
@@ -63,7 +57,6 @@ export default function App() {
         const parsed = JSON.parse(savedAuth);
         if (parsed?.user) {
           setAdminUser(parsed);
-          // If the user refreshed while in admin, retain admin view; otherwise default is public
           const savedView = sessionStorage.getItem('ratanflow_view');
           if (savedView === 'admin') {
             setCurrentView('admin');
@@ -75,40 +68,42 @@ export default function App() {
     }
   }, []);
 
-  // Fetch all showroom data
+  // Fetch all showroom data via hybrid dataService (API with automatic persistent fallback)
   const fetchData = async () => {
     try {
       setLoading(true);
 
       // 1. Fetch Products & Inventory KPIs
-      const prodRes = await axios.get('/api/products');
-      if (prodRes.data.success) {
-        setProducts(prodRes.data.data);
-        setMetrics(prodRes.data.metrics);
+      const prodRes = await dataService.getProducts();
+      if (prodRes && prodRes.data) {
+        setProducts(prodRes.data);
+        if (prodRes.metrics) {
+          setMetrics(prodRes.metrics);
+        }
       }
 
       // 2. Fetch Partners & Floor Availability
-      const partRes = await axios.get('/api/partners');
-      if (partRes.data.success) {
-        setPartners(partRes.data.data);
+      const partRes = await dataService.getPartners();
+      if (partRes && partRes.data) {
+        setPartners(partRes.data);
       }
 
       // 3. Fetch VIP Inquiries
-      const inqRes = await axios.get('/api/inquiries');
-      if (inqRes.data.success) {
-        setInquiries(inqRes.data.data);
+      const inqRes = await dataService.getInquiries();
+      if (inqRes && inqRes.data) {
+        setInquiries(inqRes.data);
       }
 
       // 4. Fetch Sales Metrics & Ledger
-      const salesRes = await axios.get('/api/sales');
-      if (salesRes.data.success) {
-        setSalesMetrics(salesRes.data.metrics);
-        setSalesTrend(salesRes.data.salesTrend || []);
-        setCategoryShare(salesRes.data.categoryShare || []);
-        setSalesList(salesRes.data.data || []);
+      const salesRes = await dataService.getSales();
+      if (salesRes) {
+        if (salesRes.metrics) setSalesMetrics(salesRes.metrics);
+        if (salesRes.salesTrend) setSalesTrend(salesRes.salesTrend);
+        if (salesRes.categoryShare) setCategoryShare(salesRes.categoryShare);
+        if (salesRes.data) setSalesList(salesRes.data);
       }
     } catch (err) {
-      console.error('Error fetching data from RatanFlow API:', err);
+      console.error('Error hydrating showroom data:', err);
     } finally {
       setLoading(false);
     }
@@ -122,6 +117,7 @@ export default function App() {
   const handleNavigate = (view) => {
     setCurrentView(view);
     sessionStorage.setItem('ratanflow_view', view);
+    setIsMobileDrawerOpen(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -141,21 +137,53 @@ export default function App() {
 
   // Optimistic update handlers
   const handleProductUpdated = (updated) => {
-    setProducts(prev => prev.map(p => p._id === updated._id ? updated : p));
-    setProducts(all => {
-      const lowStockCount = all.filter(p => p.lowStock).length;
-      setMetrics(m => ({ ...m, lowStockCount }));
-      return all;
+    const enriched = enrichProduct(updated);
+    setProducts(prev => {
+      const next = prev.map(p => p._id === enriched._id ? enriched : p);
+      const lowStockCount = next.filter(p => p.lowStock).length;
+      const highDemandCount = next.filter(p => p.demandStatus === 'High Demand').length;
+      const totalInventoryValue = next.reduce((s, p) => s + (p.price * p.stockCount), 0);
+      setMetrics({
+        totalProducts: next.length,
+        totalInventoryValue,
+        lowStockCount,
+        highDemandCount
+      });
+      return next;
     });
   };
 
   const handleProductCreated = (created) => {
-    setProducts(prev => [created, ...prev]);
-    fetchData();
+    const enriched = enrichProduct(created);
+    setProducts(prev => {
+      const next = [enriched, ...prev.filter(p => p._id !== enriched._id)];
+      const lowStockCount = next.filter(p => p.lowStock).length;
+      const highDemandCount = next.filter(p => p.demandStatus === 'High Demand').length;
+      const totalInventoryValue = next.reduce((s, p) => s + (p.price * p.stockCount), 0);
+      setMetrics({
+        totalProducts: next.length,
+        totalInventoryValue,
+        lowStockCount,
+        highDemandCount
+      });
+      return next;
+    });
   };
 
   const handleProductDeleted = (deletedId) => {
-    setProducts(prev => prev.filter(p => p._id !== deletedId));
+    setProducts(prev => {
+      const next = prev.filter(p => p._id !== deletedId);
+      const lowStockCount = next.filter(p => p.lowStock).length;
+      const highDemandCount = next.filter(p => p.demandStatus === 'High Demand').length;
+      const totalInventoryValue = next.reduce((s, p) => s + (p.price * p.stockCount), 0);
+      setMetrics({
+        totalProducts: next.length,
+        totalInventoryValue,
+        lowStockCount,
+        highDemandCount
+      });
+      return next;
+    });
   };
 
   const handlePartnerUpdated = (updated) => {
@@ -166,6 +194,10 @@ export default function App() {
     setInquiries(prev => prev.map(i => i._id === updated._id ? updated : i));
   };
 
+  const handleInquiryCreated = (newInquiry) => {
+    setInquiries(prev => [newInquiry, ...prev]);
+  };
+
   const handleInquiryDeleted = (deletedId) => {
     setInquiries(prev => prev.filter(i => i._id !== deletedId));
   };
@@ -173,7 +205,7 @@ export default function App() {
   const pendingInquiriesCount = inquiries.filter(i => i.status === 'Pending').length;
 
   return (
-    <div className="min-h-screen bg-charcoal-950 font-sans text-slate-100 flex flex-col selection:bg-gold-500 selection:text-charcoal-950">
+    <div className="min-h-screen bg-charcoal-950 font-sans text-slate-100 flex flex-col selection:bg-gold-500 selection:text-charcoal-950 overflow-x-hidden w-full">
       {/* 1. UNIVERSAL NAVBAR */}
       <Navbar
         currentView={currentView}
@@ -199,6 +231,7 @@ export default function App() {
               products={products}
               partners={partners}
               onNavigateToLogin={() => handleNavigate('login')}
+              onInquiryCreated={handleInquiryCreated}
             />
           )}
 
@@ -212,8 +245,8 @@ export default function App() {
 
           {/* VIEW 3: ADMIN MANAGEMENT SUITE */}
           {currentView === 'admin' && (
-            <div className="flex-1 flex max-w-7xl w-full mx-auto">
-              {/* Responsive Sidebar (off-canvas on mobile/tablet <1024px) */}
+            <div className="flex-1 flex max-w-7xl w-full mx-auto relative">
+              {/* Responsive Sidebar (off-canvas drawer on mobile/tablet <1024px) */}
               <Sidebar
                 activeTab={activeAdminTab}
                 setActiveTab={setActiveAdminTab}
@@ -224,7 +257,7 @@ export default function App() {
               />
 
               {/* Admin Main Viewport */}
-              <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto">
+              <main className="flex-1 p-3 sm:p-6 lg:p-8 overflow-y-auto min-w-0">
                 <AdminDashboard
                   activeTab={activeAdminTab}
                   salesMetrics={salesMetrics}

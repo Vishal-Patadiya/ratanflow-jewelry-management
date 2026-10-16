@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { X, Plus, Sparkles } from 'lucide-react';
-import axios from 'axios';
+import { dataService } from '../services/dataService';
 
-// Viva Note: Add New Item Modal to demonstrate real-time Mongoose document insertion
+// Viva Note: Add New Item Modal to demonstrate real-time Mongoose document insertion.
+// Supports both live Express API and zero-failure LocalStorage fallback.
 export default function AddProductModal({ isOpen, onClose, onProductCreated }) {
   const [formData, setFormData] = useState({
     name: '',
@@ -27,28 +28,47 @@ export default function AddProductModal({ isOpen, onClose, onProductCreated }) {
     setError('');
 
     try {
-      // Viva Note: Sending POST request to /api/products
-      const res = await axios.post('/api/products', {
+      const payload = {
         ...formData,
+        sku: formData.sku || `RF-${Date.now().toString().slice(-4)}`,
         weightGrams: Number(formData.weightGrams),
         price: Number(formData.price),
         stockCount: Number(formData.stockCount),
         minThreshold: Number(formData.minThreshold),
         recentSalesCount: Number(formData.recentSalesCount),
         inquiryCount: Number(formData.inquiryCount)
-      });
+      };
 
-      if (res.data.success && onProductCreated) {
-        onProductCreated(res.data.data);
+      const res = await dataService.addProduct(payload);
+      if (res.success && res.data) {
+        if (onProductCreated) {
+          onProductCreated(res.data);
+        }
         onClose();
+        // Reset form for next entry
+        setFormData({
+          name: '',
+          sku: `RF-${Math.floor(100 + Math.random() * 900)}`,
+          category: 'Rings',
+          metalType: 'Gold 22K',
+          weightGrams: 8.5,
+          price: 65000,
+          stockCount: 5,
+          minThreshold: 3,
+          recentSalesCount: 1,
+          inquiryCount: 1
+        });
+      } else {
+        setError('Failed to add jewelry piece. Please check details.');
       }
     } catch (err) {
       console.error('Error creating product:', err);
-      setError(err.response?.data?.message || 'Failed to add jewelry piece');
+      setError('An error occurred while saving the piece.');
     } finally {
       setIsSubmitting(false);
     }
   };
+
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fade-in">

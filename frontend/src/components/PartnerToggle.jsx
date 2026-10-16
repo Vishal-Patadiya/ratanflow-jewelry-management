@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Users, CheckCircle2, XCircle, Clock, Phone, MapPin } from 'lucide-react';
-import axios from 'axios';
+import { dataService } from '../services/dataService';
 
 // Viva Note: Admin roster component for showroom partners.
 // Allows instantaneous toggle of partner floor duty with optimistic UI updates.
@@ -10,10 +10,9 @@ export default function PartnerToggle({ partners, onPartnerUpdated }) {
   const handleToggle = async (partner) => {
     try {
       setLoadingId(partner._id);
-      // Viva Note: Sending PATCH request to backend to flip boolean isAvailableToday
-      const res = await axios.patch(`/api/partners/${partner._id}/toggle`);
-      if (res.data.success && onPartnerUpdated) {
-        onPartnerUpdated(res.data.data);
+      const res = await dataService.togglePartner(partner._id);
+      if (res.success && res.data && onPartnerUpdated) {
+        onPartnerUpdated(res.data);
       }
     } catch (err) {
       console.error('Error toggling partner status:', err);
@@ -22,6 +21,7 @@ export default function PartnerToggle({ partners, onPartnerUpdated }) {
       setLoadingId(null);
     }
   };
+
 
   return (
     <div className="card-glass rounded-xl border border-charcoal-800 p-5 space-y-4">

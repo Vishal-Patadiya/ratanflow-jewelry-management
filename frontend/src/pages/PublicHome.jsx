@@ -14,12 +14,12 @@ import {
   MapPin,
   ChevronRight
 } from 'lucide-react';
-import axios from 'axios';
+import { dataService } from '../services/dataService';
 
 // Viva Note: Public Customer Portal (Default Landing Page).
 // Open to all guests without authentication; allows browsing collection,
 // reading live counter presence, and dispatching VIP appointment requests.
-export default function PublicHome({ products = [], partners = [], onNavigateToLogin }) {
+export default function PublicHome({ products = [], partners = [], onNavigateToLogin, onInquiryCreated }) {
   const [selectedMetal, setSelectedMetal] = useState('All');
   const [search, setSearch] = useState('');
   const [inquirySuccess, setInquirySuccess] = useState(false);
@@ -61,10 +61,13 @@ export default function PublicHome({ products = [], partners = [], onNavigateToL
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      // Viva Note: Guest submission directly writes to MongoDB Inquiries queue
-      const res = await axios.post('/api/inquiries', formData);
-      if (res.data.success) {
+      // Viva Note: Guest submission writes to MongoDB or persistent LocalStorage
+      const res = await dataService.createInquiry(formData);
+      if (res.success) {
         setInquirySuccess(true);
+        if (onInquiryCreated) {
+          onInquiryCreated(res.data);
+        }
         setFormData({
           customerName: '',
           phone: '',
@@ -76,11 +79,12 @@ export default function PublicHome({ products = [], partners = [], onNavigateToL
       }
     } catch (err) {
       console.error('Error submitting VIP inquiry:', err);
-      alert('Failed to register inquiry. Please try again or call our atelier.');
+      alert('Failed to register inquiry. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
   };
+
 
   const handleSelectProductForVisit = (prod) => {
     setFormData(prev => ({

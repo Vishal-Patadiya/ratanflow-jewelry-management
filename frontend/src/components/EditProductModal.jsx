@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Save, Plus, Minus, AlertTriangle, Sparkles } from 'lucide-react';
-import axios from 'axios';
+import { dataService } from '../services/dataService';
 
 // Viva Note: Live Stock & Item Editor Modal.
 // Designed specifically for live examination demonstration so teachers can watch
@@ -50,8 +50,7 @@ export default function EditProductModal({ isOpen, onClose, product, onProductSa
     setError('');
 
     try {
-      // Viva Note: Live PUT update to backend
-      const res = await axios.put(`/api/products/${product._id}`, {
+      const res = await dataService.updateProduct(product._id, {
         stockCount: Number(formData.stockCount),
         price: Number(formData.price),
         minThreshold: Number(formData.minThreshold),
@@ -59,17 +58,18 @@ export default function EditProductModal({ isOpen, onClose, product, onProductSa
         inquiryCount: Number(formData.inquiryCount)
       });
 
-      if (res.data.success && onProductSaved) {
-        onProductSaved(res.data.data);
+      if (res.success && res.data && onProductSaved) {
+        onProductSaved(res.data);
         onClose();
       }
     } catch (err) {
       console.error('Error updating product:', err);
-      setError(err.response?.data?.message || 'Failed to update product details');
+      setError('Failed to update product details');
     } finally {
       setIsSubmitting(false);
     }
   };
+
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fade-in">

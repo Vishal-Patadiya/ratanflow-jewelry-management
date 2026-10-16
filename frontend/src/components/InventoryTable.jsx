@@ -11,7 +11,7 @@ import {
   PlusCircle,
   MinusCircle
 } from 'lucide-react';
-import axios from 'axios';
+import { dataService } from '../services/dataService';
 
 // Viva Note: Reorder Radar & Stock Threshold Manager Component.
 // Encapsulates real-time inventory ledger with horizontal scroll-lock protection for mobile viewports.
@@ -40,9 +40,9 @@ export default function InventoryTable({
   const handleQuickStock = async (product, delta) => {
     try {
       setIsUpdatingId(product._id);
-      const res = await axios.patch(`/api/products/${product._id}/stock`, { delta });
-      if (res.data.success && onProductUpdated) {
-        onProductUpdated(res.data.data);
+      const res = await dataService.updateStock(product._id, { delta });
+      if (res.success && res.data && onProductUpdated) {
+        onProductUpdated(res.data);
       }
     } catch (err) {
       console.error('Error updating stock quick:', err);
@@ -55,8 +55,8 @@ export default function InventoryTable({
   const handleDelete = async (product) => {
     if (!window.confirm(`Delete "${product.name}" from showroom catalog?`)) return;
     try {
-      const res = await axios.delete(`/api/products/${product._id}`);
-      if (res.data.success && onProductDeleted) {
+      const res = await dataService.deleteProduct(product._id);
+      if (res.success && onProductDeleted) {
         onProductDeleted(product._id);
       }
     } catch (err) {
@@ -64,6 +64,7 @@ export default function InventoryTable({
       alert('Failed to delete item');
     }
   };
+
 
   const filteredProducts = products.filter((p) => {
     const matchesSearch =

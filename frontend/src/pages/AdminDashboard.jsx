@@ -14,7 +14,7 @@ import {
   FileSpreadsheet,
   AlertTriangle
 } from 'lucide-react';
-import axios from 'axios';
+import { dataService } from '../services/dataService';
 
 // Viva Note: Main Admin Dashboard Suite.
 // Contains executive sales cards (₹ 4,28,350 / 56 Orders), visual reports,
@@ -47,9 +47,9 @@ export default function AdminDashboard({
   const handleAdvanceInquiry = async (inquiry) => {
     const nextStatus = inquiry.status === 'Pending' ? 'Stock Prepared' : 'Completed';
     try {
-      const res = await axios.patch(`/api/inquiries/${inquiry._id}/status`, { status: nextStatus });
-      if (res.data.success && onInquiryUpdated) {
-        onInquiryUpdated(res.data.data);
+      const res = await dataService.updateInquiryStatus(inquiry._id, nextStatus);
+      if (res.success && res.data && onInquiryUpdated) {
+        onInquiryUpdated(res.data);
       }
     } catch (err) {
       console.error('Error updating inquiry status:', err);
@@ -60,8 +60,8 @@ export default function AdminDashboard({
   const handleDeleteInquiry = async (inquiry) => {
     if (!window.confirm(`Delete inquiry for ${inquiry.customerName}?`)) return;
     try {
-      const res = await axios.delete(`/api/inquiries/${inquiry._id}`);
-      if (res.data.success && onInquiryDeleted) {
+      const res = await dataService.deleteInquiry(inquiry._id);
+      if (res.success && onInquiryDeleted) {
         onInquiryDeleted(inquiry._id);
       }
     } catch (err) {
@@ -69,6 +69,7 @@ export default function AdminDashboard({
       alert('Failed to delete inquiry');
     }
   };
+
 
   // Required Sales KPI Cards: Total Sales (₹ 4,28,350), Orders (56), Customers (124), Avg Order Value (₹ 7,649)
   const kpiCards = [
